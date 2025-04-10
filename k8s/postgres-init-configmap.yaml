@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+data:
+  init.sql: |
+    CREATE DATABASE feedback;
+
+    \connect feedback;
+
+    CREATE TABLE messages (
+        id SERIAL PRIMARY KEY,
+        text TEXT
+    );

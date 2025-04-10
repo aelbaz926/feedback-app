@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Feedback App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f2f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px;
+      margin: 0;
+    }
+
+    h1 {
+      color: #222;
+      margin-bottom: 20px;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 300px;
+      transition: border 0.3s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: #006eff;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #006eff;
+      border: none;
+      color: white;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0052cc;
+    }
+
+    h2 {
+      color: #333;
+      margin-top: 40px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      width: 400px;
+    }
+
+    li {
+      background: #ffffff;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      color: #444;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .delete-btn {
+      background: #ff4d4f;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .delete-btn:hover {
+      background: #cc0000;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 Share Your Feedback</h1>
+  <form id="form">
+    <input type="text" id="msg" placeholder="Type your message...">
+    <button type="submit">Send</button>
+  </form>
+
+  <h2>📋 Submitted Messages</h2>
+  <ul id="messages"></ul>
+
+  <script>
+    const form = document.getElementById('form');
+    const input = document.getElementById('msg');
+    const messagesList = document.getElementById('messages');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = input.value.trim();
+      if (!msg) return;
+      await fetch('/api/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      });
+      input.value = '';
+      loadMessages();
+    });
+
+    async function deleteMessage(id) {
+      await fetch(`/api/message/${id}`, {
+        method: 'DELETE'
+      });
+      loadMessages();
+    }
+
+    async function loadMessages() {
+      const res = await fetch('/api/messages');
+      const data = await res.json();
+      messagesList.innerHTML = '';
+      data.reverse().forEach(m => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span>${m.text}</span>
+          <button class="delete-btn" onclick="deleteMessage(${m.id})">❌</button>
+        `;
+        messagesList.appendChild(li);
+      });
+    }
+
+    loadMessages();
+  </script>
+</body>
+</html>
