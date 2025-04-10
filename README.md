@@ -1,4 +1,4 @@
-# Feedback App (3-Tier Fullstack Kubernetes Project)
+# Feedback App (3-Tier Kubernetes Project)
 
 A fully containerized and Kubernetes-ready feedback application consisting of:
 
