@@ -1,4 +1,4 @@
-# 📬 feedback Feedback App (3-Tier Fullstack Kubernetes Project)
+# Feedback App (3-Tier Fullstack Kubernetes Project)
 
 A fully containerized and Kubernetes-ready feedback application consisting of:
 
@@ -96,12 +96,12 @@ kubectl port-forward svc/frontend-service 8081:80
 
 ```
 .
-├── feedback-backend/            # Flask app
+├── feedback-backend/
 │   ├── app.py
 │   ├── requirements.txt
 │   └── Dockerfile
 │
-├── feedback-frontend/           # HTML + JS + CSS + NGINX
+├── feedback-frontend/
 │   ├── index.html
 │   ├── nginx.conf
 │   └── Dockerfile
@@ -113,8 +113,7 @@ kubectl port-forward svc/frontend-service 8081:80
 │   ├── backend-deployment.yaml
 │   ├── frontend-deployment.yaml
 │   ├── postgres-deployment.yaml
-│   ├── pgadmin.yaml
 │   └── ...
 │
-└── README.md           # This file
+└── README.md
 ```
