@@ -22,7 +22,6 @@ User Browser
 [ PostgreSQL Service - Port 5432 ]
 ```
 
-
 ---
 
 ## ⚙️ Tech Stack
@@ -30,7 +29,7 @@ User Browser
 | Layer     | Technology             |
 |-----------|------------------------|
 | Frontend  | HTML/CSS/JS, NGINX     |
-| Backend   | Python 3.9, Flask, Gunicorn |
+| Backend   | Python 3.9, Flask      |
 | Database  | PostgreSQL 13          |
 | Containers| Docker                 |
 | Orchestration | Kubernetes         |
@@ -52,14 +51,14 @@ User Browser
 
 ### 🔧 Backend
 ```bash
-cd feedback-backend
+cd src/feedback_backend
 docker build -t <your-dockerhub-username>/feedback-backend:latest .
 docker push <your-dockerhub-username>/feedback-backend:latest
 ```
 
 ### 🎨 Frontend
 ```bash
-cd feedback-frontend
+cd src/feedback_frontend
 docker build -t <your-dockerhub-username>/feedback-frontend:latest .
 docker push <your-dockerhub-username>/feedback-frontend:latest
 ```
@@ -68,8 +67,13 @@ docker push <your-dockerhub-username>/feedback-frontend:latest
 
 ## ☸️ Kubernetes Deployment (Docker Desktop K8s)
 
+### 1️⃣ Create DB Secret and ConfigMap (if not already created)
+```bash
+kubectl apply -f k8s/db-secret.yaml
+kubectl apply -f k8s/postgres-init-configmap.yaml
+```
 
-### 1️⃣ Apply All Kubernetes Resources
+### 2️⃣ Apply All Kubernetes Resources
 ```bash
 kubectl apply -f k8s/
 ```
@@ -96,24 +100,29 @@ kubectl port-forward svc/frontend-service 8081:80
 
 ```
 .
-├── feedback-backend/
-│   ├── app.py
-│   ├── requirements.txt
-│   └── Dockerfile
-│
-├── feedback-frontend/
-│   ├── index.html
-│   ├── nginx.conf
-│   └── Dockerfile
-│
-├── feedback-db/
-│   └── init.sql        # Creates DB and table
-│
-├── k8s/                # All Kubernetes manifests
+├── README.md
+├── azure-pipelines.yml
+├── k8s/
 │   ├── backend-deployment.yaml
+│   ├── db-secret.yaml
 │   ├── frontend-deployment.yaml
 │   ├── postgres-deployment.yaml
-│   └── ...
+│   └── postgres-init-configmap.yaml
 │
-└── README.md
+├── requirements.txt
+├── src/
+│   ├── feedback_backend/
+│   │   ├── app.py
+│   │   ├── __init__.py
+│   │   └── Dockerfile
+│   ├── feedback_frontend/
+│   │   ├── index.html
+│   │   ├── nginx.conf
+│   │   └── Dockerfile
+│   └── feedback_db/
+│       └── init.sql
+│
+└── tests/
+    ├── __pycache__/
+    └── test_app.py
 ```
