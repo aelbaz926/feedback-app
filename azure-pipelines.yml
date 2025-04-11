@@ -1,0 +1,116 @@
+# Azure DevOps CI/CD Pipeline for Flask + Frontend App on EKS
+
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  dockerHubNamespace: 'ahmedhedihed'
+  dockerRegistryServiceConnection: 'dockerhub-service-conn'
+  buildId: '$(Build.BuildId)'
+  backendImage: '$(dockerHubNamespace)/feedback-backend:$(buildId)'
+  frontendImage: '$(dockerHubNamespace)/feedback-frontend:$(buildId)'
+
+stages:
+
+- stage: CI
+  displayName: CI Stage
+  jobs:
+  - job: Lint
+    displayName: Lint Backend
+    pool:
+      name: self-hosted
+    steps:
+    - checkout: self
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.9'
+        addToPath: true
+
+    - script: |
+        python3.9 -m venv .venv
+        source .venv/bin/activate
+        pip install flake8
+        cd src/feedback_backend
+        flake8 app.py
+      displayName: 'Run Linting'
+
+  - job: Test
+    displayName: Unit Test Backend
+    dependsOn: Lint
+    pool:
+      name: self-hosted
+    steps:
+    - checkout: self
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.9'
+        addToPath: true
+
+    - script: |
+        python3.9 -m venv .venv
+        source .venv/bin/activate
+        pip install pytest
+        pytest tests/
+      displayName: 'Run Unit Tests'
+
+  - job: Build
+    displayName: Build and Push Images
+    dependsOn: [Lint, Test]
+    pool:
+      name: self-hosted
+    steps:
+    - checkout: self
+    - task: Docker@2
+      displayName: Build and Push Backend Image
+      inputs:
+        containerRegistry: $(dockerRegistryServiceConnection)
+        repository: '$(dockerHubNamespace)/feedback-backend'
+        command: 'buildAndPush'
+        Dockerfile: 'src/feedback_backend/Dockerfile'
+        tags: '$(buildId)'
+        buildContext: '$(Build.SourcesDirectory)/src/feedback_backend'
+
+    - task: Docker@2
+      displayName: Build and Push Frontend Image
+      inputs:
+        containerRegistry: $(dockerRegistryServiceConnection)
+        repository: '$(dockerHubNamespace)/feedback-frontend'
+        command: 'buildAndPush'
+        Dockerfile: 'src/feedback_frontend/Dockerfile'
+        tags: '$(buildId)'
+        buildContext: '$(Build.SourcesDirectory)/src/feedback_frontend'
+
+- stage: CD
+  displayName: CD Stage
+  dependsOn: CI
+  jobs:
+  - deployment: DeployToEKS
+    displayName: Deploy to EKS
+    environment: 'aws-eks-dev'
+    pool:
+      name: self-hosted
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: ReplaceTokens@5
+            inputs:
+              rootDirectory: '$(Build.SourcesDirectory)/k8s'
+              targetFiles: '**/*.yaml'
+              encoding: 'auto'
+              writeBOM: true
+              actionOnMissing: 'warn'
+              keepToken: false
+              tokenPrefix: '__'
+              tokenSuffix: '__'
+
+          - task: AWSCLI@1
+            inputs:
+              awsCredentials: 'aws-eks-service-connection'
+              regionName: 'us-east-1'
+              command: |
+                aws eks update-kubeconfig --name your-eks-cluster --region us-east-1
+                kubectl apply -f $(Build.SourcesDirectory)/k8s/
