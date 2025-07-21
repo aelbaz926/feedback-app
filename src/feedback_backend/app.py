@@ -56,6 +56,18 @@ def delete_message(msg_id):
             cur.execute("DELETE FROM messages WHERE id = %s", (msg_id,))
     return '', 204
 
+@app.route('/api/scoring', methods=['POST'])
+def save_message():
+    data = request.get_json()
+    conn = get_db_conn()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO messages (text) VALUES (%s)",
+                (data['message'],)
+            )
+    return '', 201
+
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000)
