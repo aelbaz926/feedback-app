@@ -1,89 +1,95 @@
-# Feedback application
 
 trigger:
-    branches:
-      include:
-        - main
+  branches:
+    include:
+    - main
 
 pool:
-    name: iti-self-hosted
+  name: sprints-agent
+
 
 variables:
     dockerHubNamespace: 'ahmedhedihed'
-    dockerRegistryServiceConnection: 'dockerhub-service-conn'
-    buildId: $(Build.BuildId)
+    dockerHubServiceConnection: 'dockerhub-service-connection'
+
+
 
 parameters:
-  - name: environment
-    type: string
-    default: dev
-    values:
-      - dev
-      - stagging
-      - prod
+- name: environment
+  type: string
+  default: dev
+  values:
+  - dev
+  - staging
+  - prod
+
 
 stages:
-
-- stage: CI
-  displayName: CI stage
+- stage: CI 
+  displayName: "CI (Continuous Integration)"
   jobs:
-  - job: Lint
-    displayName: Linting Backend
+  - job: Linting
+    displayName: "Linting backend"
     steps:
     - checkout: self
+
     - task: UsePythonVersion@0
       inputs:
         versionSpec: '3.9'
         addToPath: true
+
     - script: |
         python3.9 -m venv .venv
         source .venv/bin/activate
         pip install flake8
         flake8 src/feedback_backend/app.py
-      displayName: 'Run Linting'
+      displayName: "Run Linting"
+      workingDirectory: $(Build.SourcesDirectory)
 
   - job: Test
-    dependsOn: Lint
-    displayName: Unit Test Backend
+    dependsOn: Linting
+    displayName: "Unit test"
     steps:
     - checkout: self
+
     - script: |
         python3.9 -m venv .venv
         source .venv/bin/activate
         pip install -r src/feedback_backend/requirements.txt
         pip install pytest
         pytest
-      displayName: 'Run Unit Test'
+      displayName: "Run Unit Tests"
       workingDirectory: $(Build.SourcesDirectory)
 
   - job: Build
-    dependsOn: [Lint, Test]
-    displayName: Build and Push
+    dependsOn: [Test,Linting]
+    displayName: "Build/Push Docker images"
     steps:
     - checkout: self
-    
+
     - task: Docker@2
-      displayName: Build and Push Backend Image
+      displayName: "Build/Push Back-end Docker image"
       inputs:
-        containerRegistry: $(dockerRegistryServiceConnection)
+        containerRegistry: $(dockerHubServiceConnection)
         repository: $(dockerHubNamespace)/feedback-backend
         command: 'buildAndPush'
         Dockerfile: 'src/feedback_backend/Dockerfile'
-        tags: $(Build.BuildId)
         buildContext: '$(Build.SourcesDirectory)/src/feedback_backend'
+        tags: '$(Build.BuildId)'
+
 
     - task: Docker@2
-      displayName: Build and Push Frontend Image
+      displayName: "Build/Push Front-end Docker image"
       inputs:
-        containerRegistry: $(dockerRegistryServiceConnection)
+        containerRegistry: $(dockerHubServiceConnection)
         repository: $(dockerHubNamespace)/feedback-frontend
         command: 'buildAndPush'
         Dockerfile: 'src/feedback_frontend/Dockerfile'
-        tags: $(Build.BuildId)
         buildContext: '$(Build.SourcesDirectory)/src/feedback_frontend'
+        tags: '$(Build.BuildId)'
 
 - stage: CD
-  displayName: CD stage
+  displayName: CD (Continuous Deployment)
   dependsOn: CI
   jobs:
   - deployment: DeployToEKS
@@ -94,6 +100,7 @@ stages:
             deploy:
                 steps:
                 - checkout: self
+                
                 - task: ReplaceTokens@5
                   inputs:
                     rootDirectory: '$(Build.SourcesDirectory)/k8s'
@@ -114,8 +121,13 @@ stages:
                       echo "Logging in to EKS cluster"
                       aws eks update-kubeconfig \
                         --region us-east-1 \
-                        --name eks-stagging-cluster
+                        --name sprints-cluster
 
-                - script: |
-                    kubectl apply -f $(Build.SourcesDirectory)/k8s/ -n ${{ parameters.environment }}
-                  displayName: 'Deploy to EKS with kubectl'
+                - task: AWSShellScript@1
+                  displayName: 'Deploy feedback application'
+                  inputs:
+                    awsCredentials: 'aws-eks-service-connection'   # replace with your real connection name
+                    regionName: 'us-east-1'
+                    scriptType: 'inline'
+                    inlineScript: |
+                      kubectl apply -f $(Build.SourcesDirectory)/k8s/ -n ${{ parameters.environment }}
